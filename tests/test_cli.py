@@ -73,3 +73,31 @@ def test_cli_doctor_clean(msm_home):
 
     assert result.exit_code == 0
     assert "No issues found" in result.output
+
+
+def test_cli_profile_local_apply_deploys_skills(
+    msm_home, isolated_agent_config, sample_skill
+):
+    from msm.config.io import save_model
+    from msm.config.models import ProfileConfig
+    from msm.config.paths import profiles_path
+
+    runner.invoke(
+        app,
+        ["skill", "add", "postgres-expert", "--from", str(sample_skill), "--agent", "codex"],
+        env={"MSM_HOME": str(msm_home)},
+    )
+    save_model(
+        profiles_path() / "data.yaml",
+        ProfileConfig(name="data", global_skills=["postgres-expert"]),
+    )
+
+    result = runner.invoke(
+        app,
+        ["profile", "local-apply", "data"],
+        env={"MSM_HOME": str(msm_home)},
+        catch_exceptions=False,
+    )
+
+    assert result.exit_code == 0
+    assert "Deployed:" in result.output

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import yaml
 from pathlib import Path
 
 from msm.config.io import save_model
-from msm.config.models import ProfileConfig, ProjectConfig
+from msm.config.models import ExportConfig, ExportMachine, ProfileConfig, ProjectConfig
 from msm.config.paths import config_path, profiles_path
 from msm.core.service import MSMService
 
@@ -87,3 +88,73 @@ def test_doctor_reports_duplicate_remote_and_local_skill(
     issues = MSMService().doctor()
 
     assert "Duplicate skill 'spark-scala' found in: local, team" in issues
+
+
+def test_profile_apply_local_deploys_and_writes_project_yaml(
+    isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+    save_model(
+        profiles_path() / "data.yaml",
+        ProfileConfig(name="data", global_skills=["postgres-expert"]),
+    )
+
+    service.profile_apply_local("data")
+
+    project_yaml = tmp_path / ".msm" / "project.yaml"
+    assert project_yaml.exists()
+    project = ProjectConfig.model_validate(
+        yaml.safe_load(project_yaml.read_text())
+    )
+    assert project.profile == "data"
+    assert (tmp_path / ".codex" / "skills" / "postgres-expert").is_symlink()
+
+
+def test_export_embeds_full_profile_and_registries(
+    isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+    save_model(
+        profiles_path() / "data.yaml",
+        ProfileConfig(name="data", global_skills=["postgres-expert"]),
+    )
+    service.skill_add("postgres-expert", agent="codex")
+    service.config = service.config.model_copy(
+        update={"registries": {"team": "git@github.com:org/skills.git"}}
+    )
+
+    export = service.export()
+
+    assert "data" in export.machine.profiles
+    assert export.machine.profiles["data"].global_skills == ["postgres-expert"]
+    assert export.machine.registries == {"team": "git@github.com:org/skills.git"}
+
+
+def test_import_writes_profiles_and_deploys_skills(
+    isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+
+    workstation = tmp_path / "workstation.yaml"
+    save_model(
+        workstation,
+        ExportConfig(
+            machine=ExportMachine(
+                profiles={"data": ProfileConfig(name="data", global_skills=["postgres-expert"])},
+                deployed_skills=["postgres-expert"],
+                agents=["codex"],
+            )
+        ),
+    )
+
+    messages = service.import_file(workstation)
+
+    assert (profiles_path() / "data.yaml").exists()
+    assert any("Imported profile: data" in m for m in messages)
+    assert any("Deployed:" in m for m in messages)
