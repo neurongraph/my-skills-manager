@@ -4,82 +4,37 @@
 
 It manages:
 
-- Local skill registries
-- Git-backed remote skill registries
-- Global and project-local skill deployments
-- Agent-specific skill paths
-- Reusable profiles
-- Workstation export/import files
+- Local and Git-backed remote skill registries
+- Global and project-local skill deployments across multiple AI coding agents
+- Reusable profiles that group skills into named bundles
+- Workstation export/import for reproducible environment setup
 - Environment validation with `doctor`
 
-## Quick Start
+## Getting Started
 
 ```bash
-uv sync
-uv run msm --help
-uv run msm doctor
+git clone git@github.com:you/my-skills-manager.git ~/Projects/my-skills-manager
+cd ~/Projects/my-skills-manager
+just setup
 ```
 
-Create a simple skill and deploy it to Codex:
-
-```bash
-mkdir -p postgres-expert
-printf '# PostgreSQL Expert\n' > postgres-expert/SKILL.md
-uv run msm skill add postgres-expert --from ./postgres-expert --agent codex
-```
-
-List registry skills:
-
-```bash
-uv run msm skill list
-```
-
-Add a Git-backed skills registry:
-
-```bash
-uv run msm registry add personal git@github.com:neurongraph/skills-registry.git
-uv run msm registry update
-```
-
-Initialize a project-local MSM config:
-
-```bash
-uv run msm init project --profile aws-data-engineering
-uv run msm sync
-```
+See the [User Guide](docs/USER_GUIDE.md) for full setup walkthrough, profile creation, project-local deployments, and workstation migration.
 
 ## Documentation
 
 - [User Guide](docs/USER_GUIDE.md)
+- [Architecture](docs/ARCHITECTURE.md)
 - [Product Spec](docs/PRODUCT_SPEC.md)
 - [CLI Spec](docs/CLI_SPEC.md)
 - [Config Spec](docs/CONFIG_SPEC.md)
-- [Architecture](docs/ARCHITECTURE.md)
-
-## CLI Overview
-
-```bash
-msm skill add postgres-expert --from ./postgres-expert --agent codex
-msm skill remove postgres-expert
-msm skill list
-msm registry add personal git@github.com:neurongraph/skills-registry.git
-msm registry update
-msm profile global-apply aws-data-engineering
-msm profile validate aws-data-engineering
-msm sync
-msm doctor
-msm export > workstation.yaml
-msm import workstation.yaml
-msm init project --profile aws-data-engineering
-```
 
 ## Development
 
 ```bash
-uv run msm --help
+uv sync
 uv run pytest
 ```
 
 ## Status
 
-This is the MVP implementation. Skill inheritance, profile composition, and GUI features are not implemented yet.
+This is the MVP implementation. Skill inheritance and profile composition are not implemented yet.

@@ -134,6 +134,28 @@ def test_export_embeds_full_profile_and_registries(
     assert export.machine.registries == {"team": "git@github.com:org/skills.git"}
 
 
+def test_sync_removes_skills_dropped_from_profile(
+    isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+    profile_path = profiles_path() / "data.yaml"
+    save_model(profile_path, ProfileConfig(name="data", global_skills=["postgres-expert"]))
+    save_model(tmp_path / ".msm" / "project.yaml", ProjectConfig(profile="data"))
+
+    service.sync()
+    assert (tmp_path / ".codex" / "skills" / "postgres-expert").exists()
+
+    # Remove the skill from the profile and sync again
+    save_model(profile_path, ProfileConfig(name="data", global_skills=[]))
+    messages = MSMService().sync()
+
+    assert not (tmp_path / ".codex" / "skills" / "postgres-expert").exists()
+    assert not (tmp_path / ".claude" / "skills" / "postgres-expert").exists()
+    assert any("Removed:" in m for m in messages)
+
+
 def test_import_writes_profiles_and_deploys_skills(
     isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
 ):

@@ -60,6 +60,24 @@ class DeploymentManager:
         save_state(self.state)
         return removed
 
+    def remove_deployments_at(self, targets: list[Path]) -> list[Path]:
+        removed: list[Path] = []
+        target_set = set(targets)
+        kept = []
+        for record in self.state.deployments:
+            if record.target not in target_set:
+                kept.append(record)
+                continue
+            if record.target.is_symlink() or record.target.is_file():
+                record.target.unlink(missing_ok=True)
+                removed.append(record.target)
+            elif record.target.exists():
+                shutil.rmtree(record.target)
+                removed.append(record.target)
+        self.state = DeploymentState(version=self.state.version, deployments=kept)
+        save_state(self.state)
+        return removed
+
     def broken_symlinks(self) -> list[Path]:
         broken = []
         for record in self.state.deployments:

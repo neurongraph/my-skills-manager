@@ -94,6 +94,18 @@ def profile_list() -> None:
     console.print(table)
 
 
+@profile_app.command("new")
+def profile_new(
+    name: str,
+    description: Annotated[str, typer.Option("--description", "-d", help="Profile description.")] = "",
+) -> None:
+    try:
+        path = MSMService().profile_new(name, description)
+        console.print(f"Created {path}")
+    except FileExistsError as exc:
+        _fail(str(exc))
+
+
 @profile_app.command("validate")
 def profile_validate(name: str) -> None:
     try:

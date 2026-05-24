@@ -79,6 +79,20 @@ class MSMService:
             raise FileNotFoundError(f"Profile not found: {name}")
         return load_model(path, ProfileConfig)
 
+    def profile_new(self, name: str, description: str = "") -> Path:
+        path = self.profile_path(name)
+        if path.exists():
+            raise FileExistsError(f"Profile already exists: {name}")
+        agents = {
+            agent_name: {"skills": ["pptx", "xlsx", "pdf"]}
+            for agent_name, agent_config in self.config.agents.items()
+            if agent_config.enabled
+        }
+        profile = ProfileConfig(name=name, description=description, agents=agents)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        save_model(path, profile)
+        return path
+
     def profile_validate(self, name: str) -> list[str]:
         profile = self.load_profile(name)
         issues: list[str] = []
@@ -127,20 +141,48 @@ class MSMService:
     def sync(self) -> list[str]:
         messages: list[str] = []
         project_path = paths.project_config_path(self.project_root)
-        if project_path.exists():
-            project = load_model(project_path, ProjectConfig)
-            if project.profile:
-                messages.extend(self.profile_apply_local(project.profile))
-            adapters = enabled_adapters(self.config)
-            for skill in project.local_skills:
-                for adapter_name, adapter in adapters.items():
-                    messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "local"))
-            for adapter_name, entry in project.agents.items():
-                adapter = adapters.get(adapter_name)
-                if adapter is None:
-                    continue
-                for skill in entry.get("additional_skills", []):
-                    messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "local"))
+        if not project_path.exists():
+            return ["Environment already in sync"]
+
+        project = load_model(project_path, ProjectConfig)
+        adapters = enabled_adapters(self.config)
+
+        # Compute the full desired skill set before deploying
+        desired: set[str] = set(project.local_skills)
+        if project.profile:
+            profile = self.load_profile(project.profile)
+            desired.update(profile.global_skills)
+            for entry in profile.agents.values():
+                desired.update(entry.get("skills", []))
+        for entry in project.agents.values():
+            desired.update(entry.get("additional_skills", []))
+
+        # Deploy desired skills
+        if project.profile:
+            messages.extend(self.profile_apply_local(project.profile))
+        for skill in project.local_skills:
+            for adapter_name, adapter in adapters.items():
+                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "local"))
+        for adapter_name, entry in project.agents.items():
+            adapter = adapters.get(adapter_name)
+            if adapter is None:
+                continue
+            for skill in entry.get("additional_skills", []):
+                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "local"))
+
+        # Remove skills that are deployed locally for this project but no longer desired
+        local_dirs = {adapter.local_skill_path(self.project_root) for adapter in adapters.values()}
+        deployer = DeploymentManager()
+        orphans = [
+            record.target
+            for record in deployer.state.deployments
+            if record.scope == "local"
+            and record.target.parent in local_dirs
+            and record.skill not in desired
+        ]
+        for target in deployer.remove_deployments_at(orphans):
+            messages.append(f"Removed: {target}")
+
         return messages or ["Environment already in sync"]
 
     def doctor(self) -> list[str]:
