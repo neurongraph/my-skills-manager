@@ -40,3 +40,7 @@ profiles:
 # Pull latest from all registered Git registries
 update:
     msm registry update
+
+# Add a Git-backed skill registry  e.g: just add-registry personal git@github.com:you/skills.git
+add-registry NAME URL:
+    msm registry add {{NAME}} {{URL}}
