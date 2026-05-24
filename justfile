@@ -17,6 +17,12 @@ add-example-skill-registries:
     msm registry add surjit_skills https://github.com/neurongraph/skills_repo
     msm registry add obsidian https://github.com/kepano/obsidian-skills
 
+setup-project:
+    echo "run the following commands to set up your project"
+    echo "cd to/project/folder"
+    echo "msm init project --profile obsidian-vault"
+    echo "msm sync"
+
 # Install dependencies
 sync:
     uv sync
