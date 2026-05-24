@@ -14,13 +14,12 @@ class AgentConfig(BaseModel):
 
 
 class GlobalConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     version: int = 1
     registry_path: Path = Path("~/.msm/registry")
     default_deployment_mode: str = "symlink"
     agents: dict[str, AgentConfig] = Field(default_factory=dict)
-    profiles: dict[str, list[str]] = Field(default_factory=dict)
     registries: dict[str, str] = Field(default_factory=dict)
 
 
@@ -54,9 +53,10 @@ class SkillMetadata(BaseModel):
 class ExportMachine(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    profiles: list[str] = Field(default_factory=list)
+    profiles: dict[str, ProfileConfig] = Field(default_factory=dict)
     deployed_skills: list[str] = Field(default_factory=list)
     agents: list[str] = Field(default_factory=list)
+    registries: dict[str, str] = Field(default_factory=dict)
 
 
 class ExportConfig(BaseModel):

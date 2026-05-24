@@ -77,6 +77,14 @@ def profile_global_apply(name: str) -> None:
         _fail(str(exc))
 
 
+@profile_app.command("local-apply")
+def profile_local_apply(name: str) -> None:
+    try:
+        _print_lines(MSMService().profile_apply_local(name))
+    except (FileNotFoundError, ValueError) as exc:
+        _fail(str(exc))
+
+
 @profile_app.command("list")
 def profile_list() -> None:
     profiles = MSMService().profile_list()

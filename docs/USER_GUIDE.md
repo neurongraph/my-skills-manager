@@ -1,236 +1,163 @@
 # MSM User Guide
 
-`msm` manages AI coding assistant skills from a local registry and deploys them into agent-specific directories.
+`msm` manages AI coding assistant skills and deploys them into agent-specific directories for Claude Code, Codex, and other agents.
 
-It is designed around four ideas:
+Skills come from Git-backed registries. Profiles group skills into reusable bundles — some deployed globally across all projects, others locally per-project. A single export/import command moves the full setup to a new machine.
 
-- The registry is the source of truth for skills.
-- Deployments are generated from registry content.
-- Deployments use symlinks by default.
-- Global and project-local deployments can target multiple coding agents.
+---
 
-## Installation
+## Workflow 1: Set Up a New Workstation
 
-From this repository:
+Use this when you are setting up MSM for the first time — connecting skill registries, reviewing available skills, and creating profiles for your common work contexts.
 
-```bash
-uv sync
-uv run msm --help
-```
-
-For local development, run commands with `uv run msm ...`.
-
-## Default Layout
-
-MSM uses `~/.msm` by default:
-
-```text
-~/.msm/
-├── config.yaml
-├── registry/
-├── registries/
-├── profiles/
-└── state/
-```
-
-For testing or isolated use, set `MSM_HOME`:
+### 1. Install MSM
 
 ```bash
-MSM_HOME=/tmp/msm-demo uv run msm doctor
+uv tool install /path/to/my-skills-manager
+msm doctor
 ```
 
-The first command that loads configuration creates a default `config.yaml` if one does not exist.
+`doctor` creates `~/.msm/config.yaml` with defaults on first run. A healthy workstation prints `No issues found`.
 
-## Global Configuration
+Default agents configured out of the box:
 
-Default config includes `claude-code` and `codex` agents:
+| Agent | Global path | Local path |
+|---|---|---|
+| `claude-code` | `~/.claude/skills` | `.claude/skills` |
+| `codex` | `~/.config/codex/skills` | `.codex/skills` |
 
-```yaml
-version: 1
-registry_path: ~/.msm/registry
-default_deployment_mode: symlink
-agents:
-  claude-code:
-    enabled: true
-    global_path: ~/.claude/skills
-    local_path: .claude/skills
-  codex:
-    enabled: true
-    global_path: ~/.config/codex/skills
-    local_path: .codex/skills
-profiles: {}
-registries: {}
+To disable an agent or change its paths, edit `~/.msm/config.yaml`.
+
+### 2. Connect Skill Registries
+
+Skills live in Git repositories. Register one or more:
+
+```bash
+msm registry add personal git@github.com:you/skills.git
+msm registry add team    git@github.com:my-org/shared-skills.git
 ```
 
-Edit `~/.msm/config.yaml` to change agent paths or disable an agent.
+Each registry is cloned into `~/.msm/registries/<name>`. To pull the latest skills from all registered repos:
 
-## Skill Format
-
-A skill is a directory containing at least `SKILL.md`:
-
-```text
-postgres-expert/
-├── SKILL.md
-├── metadata.yaml
-├── prompts/
-└── templates/
+```bash
+msm registry update
 ```
 
-`metadata.yaml` is optional. Example:
+To see everything available across all registries:
+
+```bash
+msm skill list
+```
+
+The `Source` column shows which registry each skill came from. If the same skill name exists in both a remote registry and your local registry (`~/.msm/registry`), the local one wins.
+
+### 3. Add a One-Off Skill Locally
+
+For a skill that isn't in any registry yet, import it directly:
+
+```bash
+msm skill add my-skill --from ~/Downloads/my-skill
+```
+
+This copies the skill into `~/.msm/registry`. Prefer committing skills to a Git registry for reproducibility — one-off local skills won't appear in an export's registry list.
+
+A skill directory needs at minimum a `SKILL.md`. An optional `metadata.yaml` adds description and tags:
 
 ```yaml
 name: postgres-expert
-description: PostgreSQL optimization and architecture skill
+description: PostgreSQL optimization and query tuning
 version: 1.0.0
 tags:
   - postgres
   - sql
-files:
-  - SKILL.md
 ```
 
-## Add and Deploy a Skill
+### 4. Create Profiles
 
-Install a local skill directory into the registry and deploy it globally:
+A profile groups skills into a reusable bundle. Profiles live in `~/.msm/profiles/<name>.yaml`.
+
+Create a profile file directly:
 
 ```bash
-uv run msm skill add postgres-expert --from ./postgres-expert
+$EDITOR ~/.msm/profiles/office-work.yaml
 ```
-
-Deploy only to one agent:
-
-```bash
-uv run msm skill add postgres-expert --agent codex
-```
-
-Deploy to project-local agent paths instead of global paths:
-
-```bash
-uv run msm skill add postgres-expert --local --agent codex
-```
-
-Deploy to both global and project-local paths:
-
-```bash
-uv run msm skill add postgres-expert --global --local
-```
-
-If neither `--global` nor `--local` is provided, MSM deploys globally.
-
-## List and Remove Skills
-
-List skills and descriptions in the registry:
-
-```bash
-uv run msm skill list
-```
-
-Remove a skill from generated deployments and from the registry:
-
-```bash
-uv run msm skill remove postgres-expert
-```
-
-## Workflow: Maintain a Skills Registry and Profiles
-
-Use this workflow when you are curating reusable skills and profile definitions for a workstation or team.
-
-### Choose the Registry Location
-
-The default registry is:
-
-```text
-~/.msm/registry
-```
-
-The recommended registry source of truth is a Git repository. MSM clones registered Git repositories into `~/.msm/registries/<name>` and reads skills from those clones.
-
-Recommended structure:
-
-```text
-skills-registry/
-├── postgres-expert/
-│   ├── SKILL.md
-│   └── metadata.yaml
-└── architecture-review/
-    ├── SKILL.md
-    └── metadata.yaml
-```
-
-### Add Skills from Elsewhere
-
-The preferred workflow is to add or edit skills in a Git-backed skills registry, commit, push, and then update MSM:
-
-```bash
-cd ~/Projects/skills-registry
-mkdir -p postgres-expert
-printf '# PostgreSQL Expert\n' > postgres-expert/SKILL.md
-$EDITOR postgres-expert/metadata.yaml
-git add postgres-expert
-git commit -m "add postgres expert skill"
-git push
-
-cd ~/Projects/my-skills-manager
-uv run msm registry update
-uv run msm skill list
-```
-
-You can still import a local skill directory into the writable local registry:
-
-```bash
-uv run msm skill add postgres-expert --from ~/Downloads/postgres-expert --agent codex
-```
-
-Treat `skill add --from` as a convenience path for scratch or imported skills. For reproducible use, commit skills to a Git-backed registry first.
-
-The `--from` directory must contain `SKILL.md`. If the skill includes `metadata.yaml`, `msm skill list` shows its description.
-
-Register an external registry reference:
-
-```bash
-uv run msm registry add team-skills git@github.com:my-org/skills.git
-```
-
-`registry add` stores the registry reference in config and clones it into:
-
-```text
-~/.msm/registries/team-skills
-```
-
-Update all registered Git registries:
-
-```bash
-uv run msm registry update
-```
-
-`registry update` runs `git pull --ff-only` for existing clones. If a configured clone is missing, it clones it again.
-
-### Review Registered Skills
-
-List registered skills with descriptions and sources:
-
-```bash
-uv run msm skill list
-```
-
-Descriptions come from each skill's `metadata.yaml`:
 
 ```yaml
-name: postgres-expert
-description: PostgreSQL optimization and architecture skill
+name: office-work
+description: Office productivity — presentations, meeting prep, notes
+global_skills:
+  - pptx
+agents:
+  claude-code:
+    skills:
+      - client-meeting-prep
+      - obsidian-tasks
+  codex:
+    skills:
+      - client-meeting-prep
+      - obsidian-tasks
 ```
 
-The `Source` column is `local` for the writable local registry, or the registered Git registry name for remote skills. If a skill exists in both local and remote registries, the local registry wins. `msm doctor` reports duplicate skill names.
+**`global_skills`** are deployed to all enabled agents at the workstation level — available in every project.
 
-### Create and Maintain Profiles
+**`agents.<name>.skills`** are intended for project-local deployment. They go to `.claude/skills`, `.codex/skills`, etc. inside the project folder when you run `local-apply` or `sync`.
 
-Profiles live in `~/.msm/profiles/<name>.yaml`.
+Validate that all referenced skills and agents exist:
 
-Example `~/.msm/profiles/aws-data-engineering.yaml`:
+```bash
+msm profile validate office-work
+```
+
+List all profiles:
+
+```bash
+msm profile list
+```
+
+### 5. Deploy Global Skills
+
+Push a profile's global skills to the workstation so they're available in every project:
+
+```bash
+msm profile global-apply office-work
+```
+
+Run `msm doctor` at any time to verify the environment is consistent.
+
+---
+
+## Workflow 2: Start a New Project
+
+Use this when you open a new project folder and want to load the right skills into it for your AI coding agents.
+
+### 1. Pick or Create a Profile
+
+Review what profiles exist and which skills they include:
+
+```bash
+msm profile list
+msm profile validate office-work
+```
+
+If an existing profile fits, use it. If you need something different, either:
+
+**Add a skill to an existing profile** — edit the YAML directly:
+
+```bash
+$EDITOR ~/.msm/profiles/office-work.yaml
+```
+
+Add to `global_skills` for workstation-wide availability, or to `agents.<name>.skills` for project-local use.
+
+**Create a new profile** — create a new file in `~/.msm/profiles/`:
+
+```bash
+$EDITOR ~/.msm/profiles/aws-data-engineering.yaml
+```
 
 ```yaml
 name: aws-data-engineering
-description: AWS lakehouse engineering environment
+description: AWS lakehouse engineering
 global_skills:
   - git-workflow
   - architecture-review
@@ -241,199 +168,160 @@ agents:
       - postgres-expert
   codex:
     skills:
-      - quick-debugger
+      - spark-scala
 ```
 
-List profiles:
+After editing, validate:
 
 ```bash
-uv run msm profile list
+msm profile validate aws-data-engineering
 ```
 
-Validate that referenced skills and agents exist:
+If the profile references a skill that doesn't exist yet, add it to a registry first (`msm skill add --from ...` or commit it to your Git registry and run `msm registry update`).
+
+### 2. Apply the Profile to the Project
 
 ```bash
-uv run msm profile validate aws-data-engineering
+cd ~/Projects/my-project
+msm profile local-apply aws-data-engineering
 ```
 
-Deploy a profile globally to the workstation:
-
-```bash
-uv run msm profile global-apply aws-data-engineering
-```
-
-`global-apply` deploys profile skills to each agent's configured global path. Use it for baseline workstation skills that should be available across all projects.
-
-To add a new global skill to a profile, edit `global_skills`:
-
-```yaml
-global_skills:
-  - git-workflow
-  - architecture-review
-  - security-review
-```
-
-To add a new agent-specific skill, edit the relevant agent entry:
-
-```yaml
-agents:
-  codex:
-    skills:
-      - quick-debugger
-      - python-refactor
-```
-
-To add a new agent to a profile, add a new key under `agents`. The agent must also exist in `~/.msm/config.yaml`:
-
-```yaml
-agents:
-  opencode:
-    skills:
-      - terminal-workflow
-```
-
-## Workflow: Initialize a Project from a Profile
-
-Initialize a project:
-
-```bash
-cd ~/Projects/customer-lakehouse
-uv run msm init project --profile aws-data-engineering
-```
-
-This creates:
+This deploys the profile's agent skills into the project's local agent directories:
 
 ```text
-.msm/
-├── project.yaml
-└── deployed/
+~/Projects/my-project/
+├── .claude/skills/spark-scala   → ~/.msm/registries/...
+├── .claude/skills/postgres-expert
+└── .codex/skills/spark-scala
 ```
 
-Example `.msm/project.yaml`:
+It also writes `.msm/project.yaml` so the profile is remembered:
 
 ```yaml
 profile: aws-data-engineering
-local_skills:
-  - customer-domain-knowledge
-agents:
-  claude-code:
-    additional_skills:
-      - architecture-review
 ```
 
-Apply project config:
+From this point on, running `msm sync` in the project folder re-applies the profile — useful after `msm registry update` picks up new skill versions.
+
+### 3. Re-sync After Registry Updates
+
+When you pull new skill versions from a registry:
 
 ```bash
-uv run msm sync
+msm registry update
+cd ~/Projects/my-project && msm sync
 ```
 
-`sync` deploys the configured profile into project-local agent paths. It does not deploy the profile to global workstation paths.
+`sync` re-deploys everything in `.msm/project.yaml` — the profile, any `local_skills`, and any agent-specific `additional_skills`.
 
-For the example above, profile skills are deployed into paths such as:
+---
 
-```text
-~/Projects/customer-lakehouse/.codex/skills/
-~/Projects/customer-lakehouse/.claude/skills/
-```
+## Workflow 3: Move to a New Workstation
 
-`sync` also deploys `local_skills` to each enabled agent's local path, and deploys agent-specific `additional_skills`.
+Use this to replicate your full MSM environment on a new machine — registries, profiles, and deployed skills.
 
-Use `msm profile global-apply <profile>` only when you explicitly want the profile deployed globally to the workstation.
-
-## Doctor
-
-Run environment checks:
+### 1. Export on the Source Machine
 
 ```bash
-uv run msm doctor
+msm export > workstation.yaml
 ```
 
-Doctor reports:
-
-- Invalid global configuration
-- Missing agent path settings
-- Missing deployed skill sources
-- Broken deployment symlinks
-
-A healthy environment prints:
-
-```text
-No issues found
-```
-
-## Export and Import
-
-Export current deployment state:
-
-```bash
-uv run msm export > workstation.yaml
-```
-
-Example export:
+The export bundles everything needed:
 
 ```yaml
 version: 1
 machine:
   profiles:
-    - aws-data-engineering
+    office-work:
+      name: office-work
+      description: Office productivity — presentations, meeting prep, notes
+      global_skills:
+        - pptx
+      agents:
+        claude-code:
+          skills:
+            - client-meeting-prep
+            - obsidian-tasks
+        codex:
+          skills:
+            - client-meeting-prep
+            - obsidian-tasks
   deployed_skills:
-    - postgres-expert
+    - client-meeting-prep
+    - obsidian-tasks
+    - pptx
   agents:
+    - claude-code
     - codex
+  registries:
+    personal: git@github.com:you/skills.git
+    team: git@github.com:my-org/shared-skills.git
 ```
 
-Import a workstation file:
+Commit `workstation.yaml` to a dotfiles repo or copy it to the new machine.
+
+### 2. Import on the New Machine
+
+Install MSM, then:
 
 ```bash
-uv run msm import workstation.yaml
+msm import workstation.yaml
 ```
 
-Import redeploys the listed skills from the local registry. The skills must already exist in the registry.
+Import runs in order:
 
-## Registry References
+1. **Writes all profiles** to `~/.msm/profiles/` from the embedded profile configs.
+2. **Registers** any remote registries not yet configured and clones them.
+3. **Runs `registry update`** to ensure all clones are current.
+4. **Redeploys all listed skills** from the now-available registries.
 
-Add and clone a Git-backed registry:
+### 3. Re-apply Global Skills
+
+`import` restores skills and profiles but does not re-run `global-apply`. Do that once after import:
 
 ```bash
-uv run msm registry add my-org git@github.com:my-org/skills.git
+msm profile global-apply office-work
 ```
 
-Update configured Git-backed registries:
+### 4. Restore Project-Local Skills
+
+For each project, re-run sync:
 
 ```bash
-uv run msm registry update
+cd ~/Projects/my-project && msm sync
 ```
 
-Remote registries are read-only from MSM's point of view. Add or edit skills in the source Git repository, push the changes, then run `msm registry update`.
+`sync` reads the project's `.msm/project.yaml` (which you committed to the project repo) and re-deploys the correct profile locally.
 
-## Common Workflows
+---
 
-Create and deploy one skill:
+## Reference
 
-```bash
-mkdir -p postgres-expert
-printf '# PostgreSQL Expert\n' > postgres-expert/SKILL.md
-uv run msm skill add postgres-expert --from ./postgres-expert --agent codex
-uv run msm doctor
-```
+### Commands
 
-Use an isolated demo home:
+| Command | What it does |
+|---|---|
+| `msm doctor` | Validate environment, report issues |
+| `msm skill list` | List all skills across registries |
+| `msm skill add <name> --from <dir>` | Import a local directory into the registry |
+| `msm skill remove <name>` | Remove skill from registry and all deployments |
+| `msm registry add <name> <url>` | Register and clone a Git registry |
+| `msm registry update` | Pull latest from all registered Git registries |
+| `msm profile list` | List all profiles |
+| `msm profile validate <name>` | Check all skills and agents in a profile exist |
+| `msm profile global-apply <name>` | Deploy profile skills to global agent paths |
+| `msm profile local-apply <name>` | Deploy profile skills to project-local paths, write `.msm/project.yaml` |
+| `msm sync` | Re-apply project profile and local skills |
+| `msm export > file.yaml` | Export full workstation state |
+| `msm import <file>` | Restore workstation from export |
 
-```bash
-export MSM_HOME=/tmp/msm-demo
-uv run msm doctor
-uv run msm skill list
-```
+### Skill Deployment Scopes
 
-Prepare a project:
+**Global** (`msm profile global-apply`): Skills deployed to `~/.claude/skills`, `~/.config/codex/skills`, etc. Available in every project on the machine.
 
-```bash
-uv run msm init project --profile aws-data-engineering
-uv run msm sync
-```
+**Local** (`msm profile local-apply`, `msm sync`): Skills deployed to `.claude/skills`, `.codex/skills` inside the current project folder. Only visible to that project's agent session.
 
-## Current Limitations
+### Current Limitations
 
-- Profile composition is not implemented.
+- Profile composition (inheriting from another profile) is not implemented.
 - Skill inheritance is not implemented.
-- Marketplace hosting and GUI features are out of scope for the MVP.

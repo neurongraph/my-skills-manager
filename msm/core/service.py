@@ -104,6 +104,10 @@ class MSMService:
         if issues:
             raise ValueError("; ".join(issues))
         profile = self.load_profile(name)
+        project_path = paths.project_config_path(self.project_root)
+        project = load_model(project_path, ProjectConfig) if project_path.exists() else ProjectConfig()
+        project.profile = name
+        save_model(project_path, project)
         return self._deploy_profile(profile, "local")
 
     def _deploy_profile(self, profile: ProfileConfig, scope: str) -> list[str]:
@@ -161,17 +165,39 @@ class MSMService:
 
     def export(self) -> ExportConfig:
         state = load_state()
-        profiles = self.profile_list()
+        profiles = {name: self.load_profile(name) for name in self.profile_list()}
         skills = sorted({record.skill for record in state.deployments})
         agents = sorted({record.agent for record in state.deployments})
-        return ExportConfig(machine=ExportMachine(profiles=profiles, deployed_skills=skills, agents=agents))
+        return ExportConfig(machine=ExportMachine(
+            profiles=profiles,
+            deployed_skills=skills,
+            agents=agents,
+            registries=dict(self.config.registries),
+        ))
 
     def import_file(self, path: Path) -> list[str]:
         export = load_model(path, ExportConfig)
         messages: list[str] = []
+        for name, profile_config in export.machine.profiles.items():
+            profile_path = paths.profiles_path() / f"{name}.yaml"
+            save_model(profile_path, profile_config)
+            messages.append(f"Imported profile: {name}")
+        for name, url in export.machine.registries.items():
+            if name in self.config.registries:
+                messages.append(f"Registry already configured, skipping: {name}")
+                continue
+            try:
+                messages.append(self.registry_add(name, url))
+            except ValueError as exc:
+                messages.append(f"Warning: could not add registry {name}: {exc}")
+        if export.machine.registries:
+            try:
+                messages.extend(self.registry_update())
+            except ValueError as exc:
+                messages.append(f"Warning: registry update failed: {exc}")
         for skill in export.machine.deployed_skills:
             messages.extend(self.skill_add(skill))
-        return messages or ["No deployed skills in import file"]
+        return messages or ["Nothing to import"]
 
     def registry_add(self, name: str, url: str) -> str:
         try:

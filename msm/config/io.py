@@ -23,11 +23,19 @@ def read_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _strip_empty(data: Any) -> Any:
+    if isinstance(data, dict):
+        return {k: _strip_empty(v) for k, v in data.items() if v is not None and v != [] and v != {}}
+    if isinstance(data, list):
+        return [_strip_empty(v) for v in data]
+    return data
+
+
 def write_yaml(path: Path, data: BaseModel | dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     payload = data.model_dump(mode="json") if isinstance(data, BaseModel) else data
     with path.open("w", encoding="utf-8") as handle:
-        yaml.safe_dump(payload, handle, sort_keys=False)
+        yaml.safe_dump(_strip_empty(payload), handle, sort_keys=False)
 
 
 def load_model(path: Path, model: type[ModelT]) -> ModelT:
