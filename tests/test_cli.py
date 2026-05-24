@@ -28,6 +28,27 @@ def test_cli_skill_add_from_path(msm_home, isolated_agent_config, sample_skill):
     assert "Deployed:" in result.output
 
 
+def test_cli_skill_list_shows_descriptions(msm_home, isolated_agent_config, sample_skill):
+    runner.invoke(
+        app,
+        ["skill", "add", "postgres-expert", "--from", str(sample_skill), "--agent", "codex"],
+        env={"MSM_HOME": str(msm_home)},
+    )
+
+    result = runner.invoke(app, ["skill", "list"], env={"MSM_HOME": str(msm_home)})
+
+    assert result.exit_code == 0
+    assert "postgres-expert" in result.output
+    assert "PostgreSQL optimization" in result.output
+
+
+def test_cli_profile_apply_command_is_removed():
+    result = runner.invoke(app, ["profile", "apply", "example"])
+
+    assert result.exit_code != 0
+    assert "No such command" in result.output
+
+
 def test_cli_doctor_clean(msm_home):
     result = runner.invoke(app, ["doctor"], env={"MSM_HOME": str(msm_home)})
 

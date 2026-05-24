@@ -36,7 +36,7 @@ uv run msm skill list
 Initialize a project-local MSM config:
 
 ```bash
-uv run msm init project
+uv run msm init project --profile aws-data-engineering
 uv run msm sync
 ```
 
@@ -54,7 +54,7 @@ uv run msm sync
 msm skill add postgres-expert --from ./postgres-expert --agent codex
 msm skill remove postgres-expert
 msm skill list
-msm profile apply aws-data-engineering
+msm profile global-apply aws-data-engineering
 msm profile validate aws-data-engineering
 msm sync
 msm doctor

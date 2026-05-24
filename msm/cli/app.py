@@ -9,7 +9,6 @@ from rich.console import Console
 from rich.table import Table
 
 from msm import __version__
-from msm.config.io import write_yaml
 from msm.core.service import MSMService
 
 app = typer.Typer(help="Portable AI coding environment manager.")
@@ -63,16 +62,17 @@ def skill_remove(name: str) -> None:
 @skill_app.command("list")
 def skill_list() -> None:
     skills = MSMService().skill_list()
-    table = Table("Skill")
+    table = Table("Skill", "Description")
     for item in skills:
-        table.add_row(item)
+        description = item.metadata.description if item.metadata else ""
+        table.add_row(item.name, description)
     console.print(table)
 
 
-@profile_app.command("apply")
-def profile_apply(name: str) -> None:
+@profile_app.command("global-apply")
+def profile_global_apply(name: str) -> None:
     try:
-        _print_lines(MSMService().profile_apply(name))
+        _print_lines(MSMService().profile_apply_global(name))
     except (FileNotFoundError, ValueError) as exc:
         _fail(str(exc))
 

@@ -8,7 +8,7 @@ from msm.config.io import load_global_config, load_model, save_model
 from msm.config.models import ExportConfig, ExportMachine, GlobalConfig, ProfileConfig, ProjectConfig
 from msm.config.state import load_state
 from msm.deploy.manager import DeploymentManager
-from msm.registry.manager import RegistryManager
+from msm.registry.manager import RegistryManager, Skill
 
 
 class MSMService:
@@ -17,8 +17,8 @@ class MSMService:
         self.config = load_global_config()
         self.registry = RegistryManager(self.config)
 
-    def skill_list(self) -> list[str]:
-        return [skill.name for skill in self.registry.list_skills()]
+    def skill_list(self) -> list[Skill]:
+        return self.registry.list_skills()
 
     def skill_add(
         self,
@@ -92,22 +92,32 @@ class MSMService:
                 issues.append(f"Unknown agent: {agent}")
         return issues
 
-    def profile_apply(self, name: str) -> list[str]:
+    def profile_apply_global(self, name: str) -> list[str]:
         issues = self.profile_validate(name)
         if issues:
             raise ValueError("; ".join(issues))
         profile = self.load_profile(name)
+        return self._deploy_profile(profile, "global")
+
+    def profile_apply_local(self, name: str) -> list[str]:
+        issues = self.profile_validate(name)
+        if issues:
+            raise ValueError("; ".join(issues))
+        profile = self.load_profile(name)
+        return self._deploy_profile(profile, "local")
+
+    def _deploy_profile(self, profile: ProfileConfig, scope: str) -> list[str]:
         messages: list[str] = []
         adapters = enabled_adapters(self.config)
         for skill in profile.global_skills:
             for adapter_name, adapter in adapters.items():
-                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "global"))
+                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, scope))
         for adapter_name, entry in profile.agents.items():
             adapter = adapters.get(adapter_name)
             if adapter is None:
                 continue
             for skill in entry.get("skills", []):
-                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, "global"))
+                messages.extend(self._deploy_to_adapter(skill, adapter_name, adapter, scope))
         return messages
 
     def sync(self) -> list[str]:
@@ -116,7 +126,7 @@ class MSMService:
         if project_path.exists():
             project = load_model(project_path, ProjectConfig)
             if project.profile:
-                messages.extend(self.profile_apply(project.profile))
+                messages.extend(self.profile_apply_local(project.profile))
             adapters = enabled_adapters(self.config)
             for skill in project.local_skills:
                 for adapter_name, adapter in adapters.items():

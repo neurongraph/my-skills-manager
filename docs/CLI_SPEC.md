@@ -54,10 +54,10 @@ msm skill list
 
 # Profile Commands
 
-## Apply Profile
+## Apply Profile Globally
 
 ```bash
-msm profile apply aws-data-engineering
+msm profile global-apply aws-data-engineering
 ```
 
 ---

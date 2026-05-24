@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from msm.config.io import save_model
-from msm.config.models import ProfileConfig
+from msm.config.models import ProfileConfig, ProjectConfig
 from msm.config.paths import profiles_path
 from msm.core.service import MSMService
 
@@ -19,6 +19,17 @@ def test_skill_add_and_export(isolated_agent_config, sample_skill, tmp_path: Pat
     assert messages[0].startswith("Deployed:")
     assert export.machine.deployed_skills == ["postgres-expert"]
     assert export.machine.agents == ["codex"]
+
+
+def test_skill_list_includes_metadata_description(isolated_agent_config, sample_skill):
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+
+    skills = service.skill_list()
+
+    assert skills[0].name == "postgres-expert"
+    assert skills[0].metadata is not None
+    assert skills[0].metadata.description == "PostgreSQL optimization"
 
 
 def test_profile_validate_reports_missing_skill(msm_home):
@@ -40,3 +51,26 @@ def test_init_project_creates_project_config(msm_home, tmp_path: Path, monkeypat
     assert path == tmp_path / ".msm" / "project.yaml"
     assert path.exists()
     assert (tmp_path / ".msm" / "deployed").exists()
+
+
+def test_project_sync_deploys_profile_skills_locally(
+    isolated_agent_config, sample_skill, tmp_path: Path, monkeypatch
+):
+    monkeypatch.chdir(tmp_path)
+    service = MSMService()
+    service.registry.install_from_path(sample_skill)
+    save_model(
+        profiles_path() / "data.yaml",
+        ProfileConfig(name="data", global_skills=["postgres-expert"]),
+    )
+    save_model(tmp_path / ".msm" / "project.yaml", ProjectConfig(profile="data"))
+
+    messages = service.sync()
+
+    assert messages == [
+        f"Deployed: {tmp_path / '.codex' / 'skills' / 'postgres-expert'}",
+        f"Deployed: {tmp_path / '.claude' / 'skills' / 'postgres-expert'}",
+    ]
+    assert (tmp_path / ".codex" / "skills" / "postgres-expert").is_symlink()
+    assert not (isolated_agent_config.agents["codex"].global_path / "postgres-expert").exists()
+    assert not (isolated_agent_config.agents["claude-code"].global_path / "postgres-expert").exists()

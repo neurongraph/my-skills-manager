@@ -118,7 +118,7 @@ If neither `--global` nor `--local` is provided, MSM deploys globally.
 
 ## List and Remove Skills
 
-List skills in the registry:
+List skills and descriptions in the registry:
 
 ```bash
 uv run msm skill list
@@ -130,7 +130,70 @@ Remove a skill from generated deployments and from the registry:
 uv run msm skill remove postgres-expert
 ```
 
-## Profiles
+## Workflow: Maintain a Skills Registry and Profiles
+
+Use this workflow when you are curating reusable skills and profile definitions for a workstation or team.
+
+### Choose the Registry Location
+
+The default registry is:
+
+```text
+~/.msm/registry
+```
+
+For a version-controlled registry, keep the canonical registry in a Git repo and point `registry_path` at it:
+
+```yaml
+registry_path: ~/Projects/skills-registry
+```
+
+Recommended structure:
+
+```text
+skills-registry/
+├── postgres-expert/
+│   ├── SKILL.md
+│   └── metadata.yaml
+└── architecture-review/
+    ├── SKILL.md
+    └── metadata.yaml
+```
+
+### Add Skills from Elsewhere
+
+Add a local skill directory into the registry:
+
+```bash
+uv run msm skill add postgres-expert --from ~/Downloads/postgres-expert --agent codex
+```
+
+The `--from` directory must contain `SKILL.md`. If the skill includes `metadata.yaml`, `msm skill list` shows its description.
+
+Register an external registry reference:
+
+```bash
+uv run msm registry add team-skills git@github.com:my-org/skills.git
+```
+
+The MVP records the external registry reference in config. Remote clone/update behavior is not implemented yet.
+
+### Review Registered Skills
+
+List registered skills with descriptions:
+
+```bash
+uv run msm skill list
+```
+
+Descriptions come from each skill's `metadata.yaml`:
+
+```yaml
+name: postgres-expert
+description: PostgreSQL optimization and architecture skill
+```
+
+### Create and Maintain Profiles
 
 Profiles live in `~/.msm/profiles/<name>.yaml`.
 
@@ -164,19 +227,48 @@ Validate that referenced skills and agents exist:
 uv run msm profile validate aws-data-engineering
 ```
 
-Apply a profile:
+Deploy a profile globally to the workstation:
 
 ```bash
-uv run msm profile apply aws-data-engineering
+uv run msm profile global-apply aws-data-engineering
 ```
 
-Profile `global_skills` are deployed to all enabled agents. Agent-specific skills are deployed only to that agent.
+`global-apply` deploys profile skills to each agent's configured global path. Use it for baseline workstation skills that should be available across all projects.
 
-## Project-Local Configuration
+To add a new global skill to a profile, edit `global_skills`:
+
+```yaml
+global_skills:
+  - git-workflow
+  - architecture-review
+  - security-review
+```
+
+To add a new agent-specific skill, edit the relevant agent entry:
+
+```yaml
+agents:
+  codex:
+    skills:
+      - quick-debugger
+      - python-refactor
+```
+
+To add a new agent to a profile, add a new key under `agents`. The agent must also exist in `~/.msm/config.yaml`:
+
+```yaml
+agents:
+  opencode:
+    skills:
+      - terminal-workflow
+```
+
+## Workflow: Initialize a Project from a Profile
 
 Initialize a project:
 
 ```bash
+cd ~/Projects/customer-lakehouse
 uv run msm init project --profile aws-data-engineering
 ```
 
@@ -206,7 +298,18 @@ Apply project config:
 uv run msm sync
 ```
 
-`sync` applies the configured profile, deploys `local_skills` to each enabled agent's local path, and deploys agent-specific `additional_skills`.
+`sync` deploys the configured profile into project-local agent paths. It does not deploy the profile to global workstation paths.
+
+For the example above, profile skills are deployed into paths such as:
+
+```text
+~/Projects/customer-lakehouse/.codex/skills/
+~/Projects/customer-lakehouse/.claude/skills/
+```
+
+`sync` also deploys `local_skills` to each enabled agent's local path, and deploys agent-specific `additional_skills`.
+
+Use `msm profile global-apply <profile>` only when you explicitly want the profile deployed globally to the workstation.
 
 ## Doctor
 
