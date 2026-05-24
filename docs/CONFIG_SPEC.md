@@ -92,24 +92,25 @@ agents:
 
 # Skill Metadata
 
-Example:
+Skill metadata is defined as YAML frontmatter at the top of `SKILL.md`:
 
-```yaml
+```markdown
+---
 name: postgres-expert
-
 description: PostgreSQL optimization and architecture skill
-
 version: 1.0.0
-
 tags:
   - postgres
   - sql
   - database
+---
 
-files:
-  - SKILL.md
-  - prompts/query-optimization.md
+# PostgreSQL Expert
+
+...
 ```
+
+Only `description` is required for `msm skill list` to show a description. All other fields are optional.
 
 ---
 

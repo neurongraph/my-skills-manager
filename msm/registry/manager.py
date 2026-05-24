@@ -5,7 +5,9 @@ import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
-from msm.config.io import load_model, save_model
+import yaml as _yaml
+
+from msm.config.io import load_model
 from msm.config.models import GlobalConfig, SkillMetadata
 from msm.config.paths import expand_path, remote_registries_path
 
@@ -63,10 +65,19 @@ class RegistryManager:
         return self.metadata_at(self.resolve(name))
 
     def metadata_at(self, skill_path: Path) -> SkillMetadata | None:
-        path = skill_path / "metadata.yaml"
-        if not path.exists():
+        skill_md = skill_path / "SKILL.md"
+        if not skill_md.exists():
             return None
-        return load_model(path, SkillMetadata)
+        text = skill_md.read_text(encoding="utf-8")
+        if not text.startswith("---"):
+            return None
+        end = text.find("---", 3)
+        if end == -1:
+            return None
+        data = _yaml.safe_load(text[3:end])
+        if not isinstance(data, dict) or not data.get("description"):
+            return None
+        return SkillMetadata.model_validate({"name": skill_path.name, **data})
 
     def install_from_path(self, source: Path, name: str | None = None) -> Skill:
         source = source.expanduser().resolve()
@@ -170,5 +181,3 @@ class RegistryManager:
             raise RuntimeError(f"Git command failed: {stderr}") from exc
 
 
-def write_skill_metadata(path: Path, metadata: SkillMetadata) -> None:
-    save_model(path / "metadata.yaml", metadata)

@@ -63,9 +63,8 @@ def test_remote_registry_supports_skills_subdirectory(msm_home, tmp_path):
     subprocess.run(["git", "init", str(repo)], check=True, capture_output=True, text=True)
     skill = repo / "skills" / "pptx"
     skill.mkdir(parents=True)
-    (skill / "SKILL.md").write_text("# PPTX\n", encoding="utf-8")
-    (skill / "metadata.yaml").write_text(
-        "name: pptx\ndescription: PowerPoint presentation support\n",
+    (skill / "SKILL.md").write_text(
+        "---\nname: pptx\ndescription: PowerPoint presentation support\n---\n",
         encoding="utf-8",
     )
     run_git(repo, "add", ".")
@@ -87,9 +86,8 @@ def test_remote_registry_update_pulls_new_skills(msm_home, remote_registry_repo)
     config = registry.save_registry_reference("team", str(remote_registry_repo))
     new_skill = remote_registry_repo / "python-refactor"
     new_skill.mkdir()
-    (new_skill / "SKILL.md").write_text("# Python Refactor\n", encoding="utf-8")
-    (new_skill / "metadata.yaml").write_text(
-        "name: python-refactor\ndescription: Python refactoring support\n",
+    (new_skill / "SKILL.md").write_text(
+        "---\nname: python-refactor\ndescription: Python refactoring support\n---\n",
         encoding="utf-8",
     )
     run_git(remote_registry_repo, "add", ".")
@@ -109,9 +107,8 @@ def test_local_registry_wins_over_remote_duplicate(msm_home, sample_skill, tmp_p
     assert subprocess_result.returncode == 0
     duplicate = remote / "postgres-expert"
     duplicate.mkdir()
-    (duplicate / "SKILL.md").write_text("# Remote Postgres\n", encoding="utf-8")
-    (duplicate / "metadata.yaml").write_text(
-        "name: postgres-expert\ndescription: Remote postgres skill\n",
+    (duplicate / "SKILL.md").write_text(
+        "---\nname: postgres-expert\ndescription: Remote postgres skill\n---\n",
         encoding="utf-8",
     )
     run_git(remote, "add", ".")

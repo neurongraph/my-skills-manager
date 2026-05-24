@@ -41,13 +41,12 @@ class ProjectConfig(BaseModel):
 
 
 class SkillMetadata(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="ignore")
 
     name: str
     description: str = ""
     version: str = "0.1.0"
     tags: list[str] = Field(default_factory=list)
-    files: list[str] = Field(default_factory=lambda: ["SKILL.md"])
 
 
 class ExportMachine(BaseModel):

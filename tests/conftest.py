@@ -42,9 +42,8 @@ def isolated_agent_config(msm_home: Path) -> GlobalConfig:
 def sample_skill(tmp_path: Path) -> Path:
     skill = tmp_path / "postgres-expert"
     skill.mkdir()
-    (skill / "SKILL.md").write_text("# PostgreSQL Expert\n", encoding="utf-8")
-    (skill / "metadata.yaml").write_text(
-        "name: postgres-expert\ndescription: PostgreSQL optimization\n",
+    (skill / "SKILL.md").write_text(
+        "---\nname: postgres-expert\ndescription: PostgreSQL optimization\n---\n",
         encoding="utf-8",
     )
     return skill
@@ -75,9 +74,8 @@ def remote_registry_repo(tmp_path: Path) -> Path:
     subprocess.run(["git", "init", str(repo)], check=True, capture_output=True, text=True)
     skill = repo / "spark-scala"
     skill.mkdir()
-    (skill / "SKILL.md").write_text("# Spark Scala\n", encoding="utf-8")
-    (skill / "metadata.yaml").write_text(
-        "name: spark-scala\ndescription: Spark engineering with Scala\n",
+    (skill / "SKILL.md").write_text(
+        "---\nname: spark-scala\ndescription: Spark engineering with Scala\n---\n",
         encoding="utf-8",
     )
     run_git(repo, "add", ".")
