@@ -57,6 +57,31 @@ def test_remote_registry_add_clone_list_and_resolve(msm_home, remote_registry_re
     assert registry.resolve("spark-scala") == remote_registries_path() / "team" / "spark-scala"
 
 
+def test_remote_registry_supports_skills_subdirectory(msm_home, tmp_path):
+    repo = tmp_path / "nested-registry"
+    repo.mkdir()
+    subprocess.run(["git", "init", str(repo)], check=True, capture_output=True, text=True)
+    skill = repo / "skills" / "pptx"
+    skill.mkdir(parents=True)
+    (skill / "SKILL.md").write_text("# PPTX\n", encoding="utf-8")
+    (skill / "metadata.yaml").write_text(
+        "name: pptx\ndescription: PowerPoint presentation support\n",
+        encoding="utf-8",
+    )
+    run_git(repo, "add", ".")
+    run_git(repo, "commit", "-m", "add pptx")
+
+    config = RegistryManager(load_global_config()).save_registry_reference("nested", str(repo))
+    registry = RegistryManager(config)
+    skills = registry.list_skills()
+
+    assert skills[0].name == "pptx"
+    assert skills[0].source == "nested"
+    assert skills[0].metadata is not None
+    assert skills[0].metadata.description == "PowerPoint presentation support"
+    assert registry.resolve("pptx") == remote_registries_path() / "nested" / "skills" / "pptx"
+
+
 def test_remote_registry_update_pulls_new_skills(msm_home, remote_registry_repo):
     registry = RegistryManager(load_global_config())
     config = registry.save_registry_reference("team", str(remote_registry_repo))

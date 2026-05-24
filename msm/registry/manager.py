@@ -41,14 +41,23 @@ class RegistryManager:
         return [skills_by_name[name] for name in sorted(skills_by_name)]
 
     def resolve(self, name: str) -> Path:
-        path = self.root / name
-        if (path / "SKILL.md").exists():
+        path = self._resolve_in_root(self.root, name)
+        if path is not None:
             return path
         for _, registry_path in self.remote_registry_paths():
-            path = registry_path / name
-            if (path / "SKILL.md").exists():
+            path = self._resolve_in_root(registry_path, name)
+            if path is not None:
                 return path
         raise FileNotFoundError(f"Skill not found in registry: {name}")
+
+    def _resolve_in_root(self, root: Path, name: str) -> Path | None:
+        path = root / name
+        if (path / "SKILL.md").exists():
+            return path
+        path = root / "skills" / name
+        if (path / "SKILL.md").exists():
+            return path
+        return None
 
     def metadata_for(self, name: str) -> SkillMetadata | None:
         return self.metadata_at(self.resolve(name))
@@ -137,11 +146,19 @@ class RegistryManager:
     def _skill_dirs(self, root: Path) -> list[Path]:
         if not root.exists():
             return []
-        return [
+        dirs = [
             item
             for item in sorted(root.iterdir())
-            if item.is_dir() and (item / "SKILL.md").exists()
+            if item.is_dir() and item.name != "skills" and (item / "SKILL.md").exists()
         ]
+        skills_root = root / "skills"
+        if skills_root.exists():
+            dirs.extend(
+                item
+                for item in sorted(skills_root.iterdir())
+                if item.is_dir() and (item / "SKILL.md").exists()
+            )
+        return dirs
 
     def _run_git(self, command: list[str]) -> None:
         try:
