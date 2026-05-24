@@ -4,7 +4,7 @@ from pathlib import Path
 
 from msm.config.io import save_model
 from msm.config.models import ProfileConfig, ProjectConfig
-from msm.config.paths import profiles_path
+from msm.config.paths import config_path, profiles_path
 from msm.core.service import MSMService
 
 
@@ -74,3 +74,16 @@ def test_project_sync_deploys_profile_skills_locally(
     assert (tmp_path / ".codex" / "skills" / "postgres-expert").is_symlink()
     assert not (isolated_agent_config.agents["codex"].global_path / "postgres-expert").exists()
     assert not (isolated_agent_config.agents["claude-code"].global_path / "postgres-expert").exists()
+
+
+def test_doctor_reports_duplicate_remote_and_local_skill(
+    isolated_agent_config, sample_skill, remote_registry_repo
+):
+    service = MSMService()
+    service.registry.install_from_path(sample_skill, "spark-scala")
+    config = service.registry.save_registry_reference("team", str(remote_registry_repo))
+    save_model(config_path(), config)
+
+    issues = MSMService().doctor()
+
+    assert "Duplicate skill 'spark-scala' found in: local, team" in issues

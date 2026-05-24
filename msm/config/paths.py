@@ -16,6 +16,10 @@ def registry_path() -> Path:
     return msm_home() / "registry"
 
 
+def remote_registries_path() -> Path:
+    return msm_home() / "registries"
+
+
 def profiles_path() -> Path:
     return msm_home() / "profiles"
 
@@ -34,4 +38,3 @@ def expand_path(path: Path, project_root: Path | None = None) -> Path:
     if not expanded.is_absolute() and project_root is not None:
         return project_root / expanded
     return expanded
-

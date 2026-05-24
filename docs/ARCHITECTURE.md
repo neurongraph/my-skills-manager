@@ -36,6 +36,7 @@
 │
 ├── config.yaml
 ├── registry/
+├── registries/
 ├── profiles/
 ├── cache/
 ├── state/
@@ -94,8 +95,10 @@ Responsible for:
 Responsible for:
 - adding skills
 - removing skills
-- updating skills
+- cloning and updating Git-backed remote registries
 - resolving paths
+
+The writable local registry lives at `~/.msm/registry` by default. Git-backed registries are cloned under `~/.msm/registries/<name>` and are treated as read-only skill sources by MSM. Local skills take precedence over remote skills with the same name.
 
 ---
 

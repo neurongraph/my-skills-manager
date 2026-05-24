@@ -147,6 +147,11 @@ class MSMService:
             return [f"Invalid global config: {exc}"]
         for name, adapter_config in config.agents.items():
             issues.extend(AgentAdapter(name, adapter_config).validate())
+        registry = RegistryManager(config)
+        for name in registry.missing_remote_clones():
+            issues.append(f"Missing remote registry clone: {name}")
+        for skill, sources in registry.duplicate_skills().items():
+            issues.append(f"Duplicate skill '{skill}' found in: {', '.join(sources)}")
         for record in load_state().deployments:
             if not record.source.exists():
                 issues.append(f"Missing deployed skill source: {record.skill} -> {record.source}")
@@ -169,12 +174,18 @@ class MSMService:
         return messages or ["No deployed skills in import file"]
 
     def registry_add(self, name: str, url: str) -> str:
-        self.config = self.registry.save_registry_reference(name, url)
+        try:
+            self.config = self.registry.save_registry_reference(name, url)
+        except (RuntimeError, ValueError) as exc:
+            raise ValueError(str(exc)) from exc
         save_model(paths.config_path(), self.config)
-        return f"Registered {name}: {url}"
+        return f"Registered and cloned {name}: {url}"
 
     def registry_update(self) -> list[str]:
-        updates = self.registry.update_external_registries()
+        try:
+            updates = self.registry.update_external_registries()
+        except RuntimeError as exc:
+            raise ValueError(str(exc)) from exc
         return updates or ["No external registries configured"]
 
     def init_project(self, profile: str | None = None) -> Path:

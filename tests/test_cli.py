@@ -40,6 +40,25 @@ def test_cli_skill_list_shows_descriptions(msm_home, isolated_agent_config, samp
     assert result.exit_code == 0
     assert "postgres-expert" in result.output
     assert "PostgreSQL optimization" in result.output
+    assert "local" in result.output
+
+
+def test_cli_registry_add_clones_remote(msm_home, isolated_agent_config, remote_registry_repo):
+    result = runner.invoke(
+        app,
+        ["registry", "add", "team", str(remote_registry_repo)],
+        env={"MSM_HOME": str(msm_home)},
+    )
+
+    assert result.exit_code == 0
+    assert "Registered and cloned team" in result.output
+
+    list_result = runner.invoke(app, ["skill", "list"], env={"MSM_HOME": str(msm_home)})
+
+    assert list_result.exit_code == 0
+    assert "spark-scala" in list_result.output
+    assert "Spark engineering with Scala" in list_result.output
+    assert "team" in list_result.output
 
 
 def test_cli_profile_apply_command_is_removed():

@@ -5,6 +5,7 @@
 It manages:
 
 - Local skill registries
+- Git-backed remote skill registries
 - Global and project-local skill deployments
 - Agent-specific skill paths
 - Reusable profiles
@@ -33,6 +34,13 @@ List registry skills:
 uv run msm skill list
 ```
 
+Add a Git-backed skills registry:
+
+```bash
+uv run msm registry add personal git@github.com:neurongraph/skills-registry.git
+uv run msm registry update
+```
+
 Initialize a project-local MSM config:
 
 ```bash
@@ -54,13 +62,14 @@ uv run msm sync
 msm skill add postgres-expert --from ./postgres-expert --agent codex
 msm skill remove postgres-expert
 msm skill list
+msm registry add personal git@github.com:neurongraph/skills-registry.git
+msm registry update
 msm profile global-apply aws-data-engineering
 msm profile validate aws-data-engineering
 msm sync
 msm doctor
 msm export > workstation.yaml
 msm import workstation.yaml
-msm registry add my-org git@github.com:my-org/skills.git
 msm init project --profile aws-data-engineering
 ```
 
@@ -73,4 +82,4 @@ uv run pytest
 
 ## Status
 
-This is the MVP implementation. Remote registry clone/update behavior, skill inheritance, profile composition, and GUI features are not implemented yet.
+This is the MVP implementation. Skill inheritance, profile composition, and GUI features are not implemented yet.

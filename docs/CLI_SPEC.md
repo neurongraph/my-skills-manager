@@ -50,6 +50,8 @@ msm skill remove postgres-expert
 msm skill list
 ```
 
+Shows skill name, description, and source.
+
 ---
 
 # Profile Commands
@@ -135,6 +137,8 @@ msm import workstation.yaml
 msm registry add my-org git@github.com:my-org/skills.git
 ```
 
+Stores the registry reference and clones it into MSM-managed registry storage.
+
 ---
 
 ## Update Registry
@@ -142,6 +146,8 @@ msm registry add my-org git@github.com:my-org/skills.git
 ```bash
 msm registry update
 ```
+
+Pulls existing registry clones with `git pull --ff-only` and reclones missing configured registries.
 
 ---
 

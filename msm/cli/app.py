@@ -62,10 +62,10 @@ def skill_remove(name: str) -> None:
 @skill_app.command("list")
 def skill_list() -> None:
     skills = MSMService().skill_list()
-    table = Table("Skill", "Description")
+    table = Table("Skill", "Description", "Source")
     for item in skills:
         description = item.metadata.description if item.metadata else ""
-        table.add_row(item.name, description)
+        table.add_row(item.name, description, item.source)
     console.print(table)
 
 
@@ -124,12 +124,18 @@ def import_cmd(path: Path) -> None:
 
 @registry_app.command("add")
 def registry_add(name: str, url: str) -> None:
-    console.print(MSMService().registry_add(name, url))
+    try:
+        console.print(MSMService().registry_add(name, url))
+    except ValueError as exc:
+        _fail(str(exc))
 
 
 @registry_app.command("update")
 def registry_update() -> None:
-    _print_lines(MSMService().registry_update())
+    try:
+        _print_lines(MSMService().registry_update())
+    except ValueError as exc:
+        _fail(str(exc))
 
 
 @init_app.command("project")

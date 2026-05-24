@@ -203,6 +203,7 @@ and recreate the same environment on another machine.
 - Config export/import
 - Symlink deployments
 - Validation/doctor command
+- Git-backed remote registry clone/update
 
 ---
 
@@ -211,5 +212,4 @@ and recreate the same environment on another machine.
 - Skill inheritance
 - Auto-discovery
 - AI-generated profiles
-- Remote registries
 - Profile composition

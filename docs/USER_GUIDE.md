@@ -28,6 +28,7 @@ MSM uses `~/.msm` by default:
 ~/.msm/
 ├── config.yaml
 ├── registry/
+├── registries/
 ├── profiles/
 └── state/
 ```
@@ -142,11 +143,7 @@ The default registry is:
 ~/.msm/registry
 ```
 
-For a version-controlled registry, keep the canonical registry in a Git repo and point `registry_path` at it:
-
-```yaml
-registry_path: ~/Projects/skills-registry
-```
+The recommended registry source of truth is a Git repository. MSM clones registered Git repositories into `~/.msm/registries/<name>` and reads skills from those clones.
 
 Recommended structure:
 
@@ -162,11 +159,29 @@ skills-registry/
 
 ### Add Skills from Elsewhere
 
-Add a local skill directory into the registry:
+The preferred workflow is to add or edit skills in a Git-backed skills registry, commit, push, and then update MSM:
+
+```bash
+cd ~/Projects/skills-registry
+mkdir -p postgres-expert
+printf '# PostgreSQL Expert\n' > postgres-expert/SKILL.md
+$EDITOR postgres-expert/metadata.yaml
+git add postgres-expert
+git commit -m "add postgres expert skill"
+git push
+
+cd ~/Projects/my-skills-manager
+uv run msm registry update
+uv run msm skill list
+```
+
+You can still import a local skill directory into the writable local registry:
 
 ```bash
 uv run msm skill add postgres-expert --from ~/Downloads/postgres-expert --agent codex
 ```
+
+Treat `skill add --from` as a convenience path for scratch or imported skills. For reproducible use, commit skills to a Git-backed registry first.
 
 The `--from` directory must contain `SKILL.md`. If the skill includes `metadata.yaml`, `msm skill list` shows its description.
 
@@ -176,11 +191,23 @@ Register an external registry reference:
 uv run msm registry add team-skills git@github.com:my-org/skills.git
 ```
 
-The MVP records the external registry reference in config. Remote clone/update behavior is not implemented yet.
+`registry add` stores the registry reference in config and clones it into:
+
+```text
+~/.msm/registries/team-skills
+```
+
+Update all registered Git registries:
+
+```bash
+uv run msm registry update
+```
+
+`registry update` runs `git pull --ff-only` for existing clones. If a configured clone is missing, it clones it again.
 
 ### Review Registered Skills
 
-List registered skills with descriptions:
+List registered skills with descriptions and sources:
 
 ```bash
 uv run msm skill list
@@ -192,6 +219,8 @@ Descriptions come from each skill's `metadata.yaml`:
 name: postgres-expert
 description: PostgreSQL optimization and architecture skill
 ```
+
+The `Source` column is `local` for the writable local registry, or the registered Git registry name for remote skills. If a skill exists in both local and remote registries, the local registry wins. `msm doctor` reports duplicate skill names.
 
 ### Create and Maintain Profiles
 
@@ -363,19 +392,19 @@ Import redeploys the listed skills from the local registry. The skills must alre
 
 ## Registry References
 
-Record an external registry reference:
+Add and clone a Git-backed registry:
 
 ```bash
 uv run msm registry add my-org git@github.com:my-org/skills.git
 ```
 
-List configured external registry references:
+Update configured Git-backed registries:
 
 ```bash
 uv run msm registry update
 ```
 
-The MVP stores external registry metadata only. Remote clone/update behavior is deferred.
+Remote registries are read-only from MSM's point of view. Add or edit skills in the source Git repository, push the changes, then run `msm registry update`.
 
 ## Common Workflows
 
@@ -405,7 +434,6 @@ uv run msm sync
 
 ## Current Limitations
 
-- Remote registry clone/update is not implemented.
 - Profile composition is not implemented.
 - Skill inheritance is not implemented.
 - Marketplace hosting and GUI features are out of scope for the MVP.
