@@ -1,0 +1,45 @@
+name: coding-project
+description: Skills for working with coding projects
+agents:
+  claude-code:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans
+  codex:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans
+  antigravity:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans
+  opencode:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans
+  bob:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans
+  pi:
+    skills:
+      - skill-creator
+      - brainstorming
+      - executing-plans
+      - subagent-driven-development
+      - writing-plans

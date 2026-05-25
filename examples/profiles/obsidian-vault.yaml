@@ -1,0 +1,39 @@
+name: obsidian-vault
+description: Skills for working with obsidian vault
+agents:
+  claude-code:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt
+  codex:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt
+  antigravity:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt
+  opencode:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt
+  bob:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt
+  pi:
+    skills:
+      - obsidian-cli
+      - obsidian-markdown
+      - defuddle
+      - obsidian-todotxt

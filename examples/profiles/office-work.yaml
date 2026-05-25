@@ -1,0 +1,33 @@
+name: office-work
+description: Skills for working with office documents
+agents:
+  claude-code:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
+  codex:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
+  antigravity:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
+  opencode:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
+  bob:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
+  pi:
+    skills:
+      - pptx
+      - xlsx
+      - pdf
